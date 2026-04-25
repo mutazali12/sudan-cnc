@@ -3,135 +3,458 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC Sudan | استوديو تصميم لافتات LED Neon</title>
-
-    <!-- Tailwind CSS -->
+    <title>مطور لافتات LED المتكامل: Canvas & 3D</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- opentype.js لتحميل الخطوط -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.4/opentype.min.js"></script>
-    <!-- Three.js import map -->
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
-            }
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
         }
+    }
     </script>
-    <!-- CSS مخصص -->
-    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body { background-color: #0f172a; color: white; font-family: system-ui, sans-serif; }
+        .controls-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); }
+        input, select, textarea { background: #334155 !important; color: white !important; border-color: #475569 !important; }
+        label { color: #cbd5e1; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; block; }
+        canvas { border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        #three-container { width: 100%; height: 400px; border-radius: 1rem; overflow: hidden; position: relative;}
+        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.2rem; display: none;}
+    </style>
 </head>
-<body class="p-3 md:p-6 lg:p-8">
+<body class="p-4 md:p-8">
 
 <div class="max-w-7xl mx-auto">
-    <!-- الرأس -->
-    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-700/60 mb-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-white">
-            <span class="text-cyan-400">CNC Sudan</span>
-            <span class="text-sm font-normal text-slate-400 block md:inline md:mr-3">| استوديو تصميم لافتات <span class="text-cyan-400">LED Neon</span></span>
-        </h1>
-        <button id="btn-download-dxf" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg text-sm md:text-base transition-all hover:shadow-emerald-500/25">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-            تحميل DXF
+    <header class="flex items-center justify-between pb-8 border-b border-slate-700 mb-8">
+        <h1 class="text-3xl font-bold text-white">استوديو تصميم لافتات <span class="text-cyan-400">LED Neon</span></h1>
+        <button onclick="downloadDXF()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            تحميل ملف التصنيع (DXF)
         </button>
     </header>
 
-    <!-- الشبكة الرئيسية -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        <!-- لوحة التحكم -->
-        <div class="lg:col-span-1 glass-panel p-5 md:p-6 rounded-2xl shadow-2xl space-y-4 border border-white/10 self-start">
-            <h2 class="text-lg font-semibold text-cyan-300 mb-3 flex items-center gap-2"><span>⚙️</span> إعدادات التصميم</h2>
-
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-1 controls-panel p-6 rounded-2xl shadow-xl space-y-5 border border-slate-700">
+            <h2 class="text-xl font-semibold text-cyan-300 mb-4">إعدادات التصميم</h2>
+            
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">📁 رفع خط مخصص (TTF / OTF)</label>
-                <input type="file" id="font-upload" accept=".ttf,.otf" class="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-900 file:text-cyan-300 hover:file:bg-cyan-800 cursor-pointer">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">✏️ النص المطلوب</label>
-                <textarea id="text-input" rows="2" class="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-white resize-none text-right text-lg font-semibold focus:ring-2 focus:ring-cyan-500 placeholder-slate-400" placeholder="اكتب النص هنا...">معزز</textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">📐 عرض اللوحة (سم)</label>
-                    <input type="number" id="width-cm" value="100" min="10" max="500" class="w-full p-2.5 rounded-lg border border-slate-600 bg-slate-700 text-white text-center focus:ring-2 focus:ring-cyan-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">📏 ارتفاع اللوحة (سم)</label>
-                    <input type="number" id="height-cm" value="60" min="10" max="500" class="w-full p-2.5 rounded-lg border border-slate-600 bg-slate-700 text-white text-center focus:ring-2 focus:ring-cyan-500">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">🔘 قطر الثقب (مم)</label>
-                    <input type="number" id="hole-radius" value="3" step="0.1" min="0.5" max="20" class="w-full p-2.5 rounded-lg border border-slate-600 bg-slate-700 text-white text-center focus:ring-2 focus:ring-cyan-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1">📊 التباعد (مم)</label>
-                    <input type="number" id="hole-spacing" value="15" step="1" min="3" max="100" class="w-full p-2.5 rounded-lg border border-slate-600 bg-slate-700 text-white text-center focus:ring-2 focus:ring-cyan-500">
-                </div>
+                <label>رفع خط مخصص (TTF/OTF)</label>
+                <input type="file" id="font-upload" accept=".ttf,.otf" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-900 file:text-cyan-300 hover:file:bg-cyan-800 cursor-pointer">
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">↔️ المسافة عن الحافة (مم)</label>
-                <input type="number" id="edge-offset" value="4" step="0.5" min="0.5" max="30" class="w-full p-2.5 rounded-lg border border-slate-600 bg-slate-700 text-white text-center focus:ring-2 focus:ring-cyan-500">
+                <label>النص</label>
+                <textarea id="text-input" rows="3" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-cyan-500 outline-none resize-none text-right">معزز</textarea>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">🎨 لون الـ LED</label>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label>عرض اللوحة (سم)</label>
+                    <input type="number" id="width-cm" value="100" min="20" class="w-full p-2 rounded-lg border">
+                </div>
+                <div>
+                    <label>ارتفاع اللوحة (سم)</label>
+                    <input type="number" id="height-cm" value="60" min="20" class="w-full p-2 rounded-lg border">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label>قطر الثقب (مم)</label>
+                    <input type="number" id="hole-radius" value="3" step="0.1" class="w-full p-2 rounded-lg border">
+                </div>
+                <div>
+                    <label>التباعد (مم)</label>
+                    <input type="number" id="hole-spacing" value="15" step="1" class="w-full p-2 rounded-lg border">
+                </div>
+            </div>
+
+             <div>
+                <label>لون الـ LED (Neon)</label>
                 <input type="color" id="led-color" value="#00ffff" class="w-full h-10 rounded-lg cursor-pointer border-0 p-1 bg-slate-700">
             </div>
-
-            <!-- شريط التقدم -->
-            <div id="progress-container" class="pt-2 space-y-1 hidden">
-                <div class="flex justify-between text-xs text-slate-400">
-                    <span id="progress-label">جاري المعالجة...</span>
-                    <span id="progress-percent">0%</span>
-                </div>
-                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-                <p id="progress-detail" class="text-xs text-slate-500"></p>
-            </div>
-
-            <div id="status-message" class="text-xs text-slate-400 text-center py-1"></div>
-
-            <button id="btn-process" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-bold transition text-base shadow-lg hover:shadow-cyan-500/25">
-                🔄 تحديث المعاينة
-            </button>
-
-            <div class="text-xs text-slate-500 text-center pt-2">
-                الثقوب: <span id="hole-count">-</span> | الوقت: <span id="proc-time">-</span>
+            
+            <div class="pt-4 border-t border-slate-700">
+                <button onclick="processDesign()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-bold transition">
+                    تحديث المعاينة
+                </button>
             </div>
         </div>
 
-        <!-- منطقة المعاينة -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Canvas 2D -->
-            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-xl">
-                <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">📋 معاينة التوزيع + إطار القطع (Canvas 2D)</h3>
-                <div class="flex justify-center bg-white/95 p-2 rounded-xl overflow-auto min-h-[280px] max-h-[500px]" id="canvas-wrapper">
+        <div class="lg:col-span-2 space-y-8">
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">معاينة التوزيع دقيقة (Canvas 2D)</h3>
+                <div class="flex justify-center bg-white p-2 rounded-xl overflow-auto min-h-[300px]">
                     <canvas id="main-canvas"></canvas>
                 </div>
             </div>
 
-            <!-- Three.js 3D -->
-            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-xl relative">
-                <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">🖥️ المعاينة الواقعية (Three.js 3D)</h3>
-                <div id="three-container">
-                    <div id="loader-3d" class="absolute inset-0 flex items-center justify-center text-white text-lg bg-black/70 z-10 pulse-anim" style="display:flex;">جاري تحميل المحرك...</div>
-                </div>
-                <p class="text-xs text-slate-500 text-center mt-2">🖱️ اسحب للتدوير | 🔍 عجلة الفأرة للتكبير</p>
-                <div class="text-center mt-1">
-                    <a href="https://mutaz.net" target="_blank" class="text-slate-500 hover:text-cyan-400 text-xs transition">Developed by Mutaz</a>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 relative">
+                <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">المعاينة الواقعية (Three.js 3D)</h3>
+                <div id="three-container" class="bg-black">
+                    <div id="loader" class="loader">جاري تحميل المحرك ثلاثي الأبعاد...</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ملفات الجافاسكريبت -->
-<script type="module" src="js/main.js"></script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // المتغيرات العالمية
+    let font;
+    let computedHoles = [];
+    let dxfScale = 10; // 1cm في الواقع = 10 وحدات في DXF (مم)
+    
+    // عناصر الـ DOM
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const textInput = document.getElementById('text-input');
+    const widthInput = document.getElementById('width-cm');
+    const heightInput = document.getElementById('height-cm');
+    const radiusInput = document.getElementById('hole-radius');
+    const spacingInput = document.getElementById('hole-spacing');
+    const fontUpload = document.getElementById('font-upload');
+    const ledColorInput = document.getElementById('led-color');
+
+    // إعداد Three.js
+    let scene, camera, renderer, controls, acrylicMesh, ledPathMesh, pointLight;
+    const threeContainer = document.getElementById('three-container');
+    const loader = document.getElementById('loader');
+
+    // 1. تحميل الخط الافتراضي عند البدء
+    window.addEventListener('load', () => {
+        initThree();
+        loadFont('./fonts/arial.ttf'); // تأكد من وجود ملف خط في هذا المسار
+    });
+
+    // استماع لتغيير الخط
+    fontUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                font = opentype.parse(event.target.result);
+                processDesign();
+            } catch (err) {
+                alert('خطأ في قراءة ملف الخط. تأكد أنه TTF أو OTF.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // دالة تحميل الخط
+    function loadFont(url) {
+        opentype.load(url, (err, loadedFont) => {
+            if (err) {
+                console.error('Font could not be loaded:', err);
+                // محاولة تحذير المستخدم ولكن الاستمرار بـ sans-serif للمعاينة الأساسية
+                alert('لم يتم العثور على الخط الافتراضي في مجلد /fonts/. يرجى رفع خط مخصص.');
+            } else {
+                font = loadedFont;
+                processDesign();
+            }
+        });
+    }
+
+    // جعل الدالة متاحة عالمياً
+    window.processDesign = processDesign;
+
+    // 2. المعالج الرئيسي (Canvas 2D) - حساب الثقوب داهل الحروف
+    function processDesign() {
+        if (!font) return;
+
+        const text = textInput.value || " ";
+        const widthCm = parseFloat(widthInput.value);
+        const heightCm = parseFloat(heightInput.value);
+        const holeRadiusMm = parseFloat(radiusInput.value);
+        const spacingMm = parseFloat(spacingInput.value);
+
+        // إعدادات الكانفاس (الدقة)
+        const scale = 5; // دقة العرض
+        const w = widthCm * scale;
+        const h = heightCm * scale;
+        canvas.width = w;
+        canvas.height = h;
+
+        // تنظيف الكانفاس
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, w, h);
+
+        // حساب حجم الخط الأنسب ملء اللوحة
+        let fontSize = w / (text.length * 0.7); 
+        fontSize = Math.min(fontSize, h * 0.8); // لا يتجاوز 80% من الارتفاع
+
+        // الحصول على مسار الخط (Path) من opentype.js
+        const xPath = w / 2;
+        const yPath = h / 2 + fontSize / 3; // تعديل بسيط للوسط العمودي
+        const path = font.getPath(text, 0, 0, fontSize);
+        
+        // حساب حدود النص لتوسيطه تماماً
+        const boundingBox = path.getBoundingBox();
+        const textW = boundingBox.x2 - boundingBox.x1;
+        const textH = boundingBox.y2 - boundingBox.y1;
+        const offsetX = w/2 - (boundingBox.x1 + textW/2);
+        const offsetY = h/2 - (boundingBox.y1 + textH/2);
+
+        // رسم النص المفرغ (الحدود) على الكانفاس للمعاينة
+        ctx.translate(offsetX, offsetY);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = fontSize * 0.01;
+        path.stroke = ctx.strokeStyle;
+        path.fill = null;
+        path.draw(ctx);
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // إعادة التعيين
+
+        // --- خوارزمية توزيع الثقوب داخل الحروف ---
+        computedHoles = [];
+        const step = spacingMm * (scale / 10); // تحويل مم إلى وحدات كانفاس
+        const rCanvas = holeRadiusMm * (scale / 10);
+
+        // إنشاء كانفاس مؤقت للتحقق من التصادم (Collision Mask)
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = w;
+        maskCanvas.height = h;
+        const maskCtx = maskCanvas.getContext('2d');
+        
+        // رسم النص مصمتاً بلون أسود على الكانفاس المؤقت
+        maskCtx.translate(offsetX, offsetY);
+        maskCtx.fillStyle = 'black';
+        const maskPath = font.getPath(text, 0, 0, fontSize);
+        maskPath.fill = 'black';
+        maskPath.draw(maskCtx);
+        maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+        // الحصول على بيانات البكسل
+        const imgData = maskCtx.getImageData(0, 0, w, h).data;
+
+        // مسح الشبكة والتحقق من وجود النص (اللون الأسود)
+        for (let x = step; x < w; x += step) {
+            for (let y = step; y < h; y += step) {
+                // حساب الفهرس في مصفوفة بكسلات imgData (RGBA)
+                const index = (Math.floor(y) * w + Math.floor(x)) * 4;
+                const alpha = imgData[index + 3]; // قيمة الـ Alpha (الشفافية)
+
+                // إذا كان البكسل غير شفاف (يعني جزء من النص الأسود)
+                if (alpha > 128) {
+                    computedHoles.push({ x: x / scale, y: y / scale }); // حفظ الإحداثيات بالسنتيمتر
+
+                    // رسم الثقب على الكانفاس الرئيسي للمعاينة
+                    ctx.beginPath();
+                    ctx.arc(x, y, rCanvas, 0, Math.PI * 2);
+                    ctx.fillStyle = ledColorInput.value;
+                    ctx.fill();
+                    ctx.strokeStyle = '#ff4444';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // تحديث المعاينة ثلاثية الأبعاد
+        updateThreePreview(widthCm, heightCm, computedHoles, holeRadiusMm, ledColorInput.value);
+    }
+
+    // 3. محرك المعاينة الواقعية (Three.js)
+    function initThree() {
+        loader.style.display = 'block';
+        
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+
+        camera = new THREE.Camera();
+        // سيتم إعداد الكاميرا والإضاءة بتفصيل أكبر في updateThreePreview بناءً على الحجم
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(threeContainer.clientWidth, 400);
+        threeContainer.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // إضاءة بيئية خفيفة
+        scene.add(new THREE.AmbientLight(0x404040, 2));
+
+        loader.style.display = 'none';
+
+        // حلقة التحريك
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if (pointLight) {
+                // تأثير نبض خفيف للإضاءة
+                pointLight.intensity = 15 + Math.sin(Date.now() * 0.005) * 2;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // التعامل مع تغيير حجم النافذة
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+        if (!camera || !renderer) return;
+        camera.aspect = threeContainer.clientWidth / 400;
+        camera.updateProjectionMatrix();
+        renderer.setSize(threeContainer.clientWidth, 400);
+    }
+
+    function updateThreePreview(wCm, hCm, holes, holeRadMm, ledColor) {
+        if (!scene) return;
+
+        // تنظيف الكائنات القديمة
+        if (acrylicMesh) scene.remove(acrylicMesh);
+        if (ledPathMesh) scene.remove(ledPathMesh);
+        if (pointLight) scene.remove(pointLight);
+
+        const materialColor = new THREE.Color(ledColor);
+
+        // 1. إنشاء لوحة الأكريليك (سميكة ومفرغة)
+        const x3d = wCm;
+        const y3d = hCm;
+        const thickness = 0.8; // سماكة الأكريليك (سم)
+
+        // شكل اللوحة الأساسي
+        const boardShape = new THREE.Shape();
+        boardShape.moveTo(0, 0);
+        boardShape.lineTo(x3d, 0);
+        boardShape.lineTo(x3d, y3d);
+        boardShape.lineTo(0, y3d);
+        boardShape.lineTo(0, 0);
+
+        // إضافة الثقوب محفورة داخل الشكل (Holes in Shape)
+        const r3d = holeRadMm / 10; // تحويل مم إلى سم
+        holes.forEach(hole => {
+            const holePath = new THREE.Path();
+            // ملاحظة: Three.js يعتبر Y للأعلى، الكانفاس يعتبر Y للأسفل، نحتاج لقلب Y
+            holePath.absarc(hole.x, y3d - hole.y, r3d, 0, Math.PI * 2, true);
+            boardShape.holes.push(holePath);
+        });
+
+        // تجسيم الشكل (Extrude)
+        const extrudeSettings = { depth: thickness, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 3 };
+        const geometry = new THREE.ExtrudeGeometry(boardShape, extrudeSettings);
+        
+        // مادة أكريليك شبه شفافة
+        const material = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 0,
+            roughness: 0.1,
+            transmission: 0.9, // شفافية عالية
+            opacity: 0.3,
+            transparent: true,
+            clearcoat: 1,
+            ior: 1.5,
+        });
+        
+        acrylicMesh = new THREE.Mesh(geometry, material);
+        // توسيط اللوحة
+        acrylicMesh.position.set(-x3d/2, -y3d/2, -thickness/2);
+        scene.add(acrylicMesh);
+
+        // 2. إنشاء مسار LED مضيء (النيون) - خلف اللوحة قليلاً
+        if (holes.length > 1) {
+            const points = holes.map(h => new THREE.Vector3(h.x - x3d/2, (y3d - h.y) - y3d/2, -thickness/2 - 0.1));
+            
+            // محاولة ترتيب النقاط لإنشاء مسار متصل (تبسيط عالي)
+            // في الواقع نحتاج لخوارزمية TSP، هنا سنرسم نقاطاً مضيئة فقط
+            
+            const ledGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const ledMat = new THREE.PointsMaterial({
+                color: materialColor,
+                size: r3d * 3,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending, // تأثير التوهج
+                depthTest: false
+            });
+            
+            ledPathMesh = new THREE.Points(ledGeo, ledMat);
+            scene.add(ledPathMesh);
+
+            // إضافة ضوء نقطي قوي بنفس لون الـ LED
+            pointLight = new THREE.PointLight(materialColor, 15, x3d * 2);
+            pointLight.position.set(0, 0, -thickness);
+            scene.add(pointLight);
+        }
+
+        // إعداد الكاميرا لتناسب حجم اللوحة
+        const maxDim = Math.max(x3d, y3d);
+        const fov = 60;
+        const aspect = threeContainer.clientWidth / 400;
+        
+        // تعديل الكاميرا (Perspective)
+        camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
+        const zPos = maxDim / (2 * Math.tan((fov * Math.PI) / 360)) + thickness * 2;
+        camera.position.set(maxDim/2, y3d/2, zPos);
+        camera.lookAt(0, 0, 0);
+        
+        // تحديث التحكم
+        controls.object = camera;
+        controls.target.set(0, 0, 0);
+        controls.update();
+    }
+
+
+    // 4. دالة توليد وتحميل ملف DXF
+    window.downloadDXF = function() {
+        if (computedHoles.length === 0) {
+            alert('يرجى تحديث التصميم وتوليد الثقوب أولاً.');
+            return;
+        }
+
+        const widthMm = parseFloat(widthInput.value) * 10;
+        const heightMm = parseFloat(heightInput.value) * 10;
+        const holeRadiusMm = parseFloat(radiusInput.value);
+
+        let dxf = "0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1021\n0\nENDSEC\n";
+        dxf += "0\nSECTION\n2\nENTITIES\n";
+
+        // 1. رسم حدود اللوحة (مستطيل)
+        dxf += `0\nLWPOLYLINE\n8\nBoard_Outline\n90\n4\n70\n1\n`; // Closed polyline
+        // Coordinates (X, Y in mm)
+        dxf += `10\n0\n20\n0\n`;
+        dxf += `10\n${widthMm}\n20\n0\n`;
+        dxf += `10\n${widthMm}\n20\n${heightMm}\n`;
+        dxf += `10\n0\n20\n${heightMm}\n`;
+
+        // 2. رسم الثقوب (دوائر)
+        computedHoles.forEach(hole => {
+            // تحويل سم كانفاس إلى مم DXF، وقلب Y لأن DXF يبدأ من الأسفل اليسار
+            const x = hole.x * 10;
+            const y = heightMm - (hole.y * 10); 
+            
+            dxf += "0\nCIRCLE\n8\nLED_Holes\n"; // Layer name
+            dxf += `10\n${x}\n`; // Center X
+            dxf += `20\n${y}\n`; // Center Y
+            dxf += `40\n${holeRadiusMm}\n`; // Radius
+        });
+
+        dxf += "0\nENDSEC\n0\nEOF\n";
+
+        // تحميل الملف
+        const blob = new Blob([dxf], { type: 'application/dxf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `LED_Sign_${textInput.value || 'Design'}_${Date.now()}.dxf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+</script>
 </body>
 </html>
