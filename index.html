@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مطور لافتات LED | إطار قطع فائق الدقة</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.4/opentype.min.js"></script>
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: rgba(30, 41, 59, 0.85);
+            --text: #e2e8f0;
+            --accent: #22d3ee;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .controls-panel {
+            background: var(--panel);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(71, 85, 105, 0.6);
+        }
+        input,
+        select,
+        textarea {
+            background: #334155 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #475569 !important;
+            transition: all 0.2s;
+        }
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+            outline: none;
+        }
+        label {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+        canvas {
+            border-radius: 1rem;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+        }
+        #three-container {
+            width: 100%;
+            height: 420px;
+            border-radius: 1rem;
+            overflow: hidden;
+            position: relative;
+            background: #000;
+        }
+        .progress-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+            border-radius: 99px;
+            transition: width 0.15s;
+            width: 0%;
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        .pulse-anim {
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+        .btn-primary {
+            background: #0891b2;
+            transition: all 0.25s;
+        }
+        .btn-primary:hover {
+            background: #06b6d4;
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-success {
+            background: #059669;
+            transition: all 0.25s;
+        }
+        .btn-success:hover {
+            background: #10b981;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+            transform: translateY(-1px);
+        }
+        @media (max-width: 768px) {
+            #three-container {
+                height: 300px;
+            }
+            .controls-panel {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="p-3 md:p-6 lg:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-700/60 mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-white">
+            استوديو لافتات <span class="text-cyan-400">LED Neon</span>
+            <span class="text-xs font-normal text-slate-500 block md:inline md:mr-3">v2.2 · إطار قطع فائق الدقة</span>
+        </h1>
+        <div class="flex gap-3 flex-wrap">
+            <button onclick="downloadDXF()"
+            class="btn-success text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg text-sm md:text-base">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" x2="12" y1="15" y2="3" />
+        </svg>
+        تحميل DXF
+    </button>
+    <button onclick="cancelProcessing()" id="btn-cancel"
+    class="bg-red-700 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hidden items-center gap-2 transition shadow-lg">
+    <span>⏹</span> إلغاء
+</button>
+</div>
+</header>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+    <!-- لوحة التحكم -->
+    <div class="lg:col-span-1 controls-panel p-5 md:p-6 rounded-2xl shadow-2xl space-y-4 border self-start">
+        <h2 class="text-lg font-semibold text-cyan-300 mb-3 flex items-center gap-2"><span>⚙️</span> إعدادات التصميم</h2>
+
+        <div>
+            <label>📁 رفع خط مخصص (TTF / OTF)</label>
+            <input type="file" id="font-upload" accept=".ttf,.otf"
+            class="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-900 file:text-cyan-300 hover:file:bg-cyan-800 cursor-pointer">
+        </div>
+
+        <div>
+            <label>✏️ النص المطلوب</label>
+            <textarea id="text-input" rows="2"
+            class="w-full p-3 rounded-lg border resize-none text-right text-lg font-semibold"
+        placeholder="اكتب النص هنا...">معزز</textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label>📐 عرض اللوحة (سم)</label>
+            <input type="number" id="width-cm" value="100" min="10" max="500"
+            class="w-full p-2.5 rounded-lg border text-center">
+        </div>
+        <div>
+            <label>📏 ارتفاع اللوحة (سم)</label>
+            <input type="number" id="height-cm" value="60" min="10" max="500"
+            class="w-full p-2.5 rounded-lg border text-center">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label>🔘 قطر الثقب (مم)</label>
+            <input type="number" id="hole-radius" value="3" step="0.1" min="0.5" max="20"
+            class="w-full p-2.5 rounded-lg border text-center">
+        </div>
+        <div>
+            <label>📊 التباعد (مم)</label>
+            <input type="number" id="hole-spacing" value="15" step="1" min="3" max="100"
+            class="w-full p-2.5 rounded-lg border text-center">
+        </div>
+    </div>
+
+    <div>
+        <label>🎨 لون الـ LED</label>
+        <input type="color" id="led-color" value="#00ffff"
+        class="w-full h-10 rounded-lg cursor-pointer border-0 p-1 bg-slate-700">
+    </div>
+
+    <div class="pt-2 space-y-1" id="progress-container" style="display:none;">
+        <div class="flex justify-between text-xs text-slate-400"><span id="progress-label">جاري المعالجة...</span><span
+            id="progress-percent">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <p class="text-xs text-slate-500" id="progress-detail"></p>
+        </div>
+
+        <div id="status-message" class="text-xs text-slate-400 text-center py-1"></div>
+
+        <div class="pt-3 border-t border-slate-700/60 flex flex-col gap-2">
+            <button onclick="triggerProcess()" id="btn-process"
+            class="btn-primary w-full text-white py-3 rounded-xl font-bold transition text-base shadow-lg">
+            🔄 تحديث المعاينة
+        </button>
+        <button onclick="quickPreview()"
+        class="w-full bg-slate-600 hover:bg-slate-500 text-white py-2 rounded-xl text-sm font-medium transition">
+        ⚡ معاينة سريعة (دقة منخفضة)
+    </button>
+</div>
+
+<div class="text-xs text-slate-500 text-center pt-2">
+    الثقوب: <span id="hole-count">-</span> | الوقت: <span id="proc-time">-</span>
+</div>
+</div>
+
+<!-- المعاينة -->
+<div class="lg:col-span-2 space-y-6">
+    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-xl">
+        <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">📋 معاينة التوزيع + إطار القطع (Canvas 2D)</h3>
+        <div class="flex justify-center bg-white/95 p-2 rounded-xl overflow-auto min-h-[280px] max-h-[500px]"
+        id="canvas-wrapper">
+        <canvas id="main-canvas"></canvas>
+    </div>
+</div>
+<div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-xl relative">
+    <h3 class="text-sm font-medium text-slate-400 mb-3 text-center">🖥️ المعاينة الواقعية (Three.js 3D)</h3>
+    <div id="three-container">
+        <div id="loader-3d"
+        class="absolute inset-0 flex items-center justify-center text-white text-lg bg-black/70 z-10 pulse-anim"
+        style="display:flex;">
+        جاري تحميل المحرك ثلاثي الأبعاد...
+    </div>
+</div>
+<p class="text-xs text-slate-500 text-center mt-2">🖱️ اسحب للتدوير | 🔍 عجلة الفأرة للتكبير</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Web Worker -->
+<script>
+    const workerCode = `
+            let cancelled = false;
+            self.onmessage = function(e) {
+                if (e.data.type === 'cancel') { cancelled = true; return; }
+                const { imgBuffer, width, height, step, scale, holeRadiusMm } = e.data;
+                const imgData = new Uint8ClampedArray(imgBuffer);
+                const holes = [];
+                let lastProgressSent = 0;
+                for (let x = step; x < width; x += step) {
+                    if (cancelled) break;
+                    for (let y = step; y < height; y += step) {
+                        const index = (Math.floor(y) * width + Math.floor(x)) * 4;
+                        if (imgData[index + 3] > 128) {
+                            holes.push({ x: x / scale, y: y / scale, cx: x, cy: y });
+                        }
+                    }
+                    const progress = Math.round((x / width) * 100);
+                    if (progress - lastProgressSent >= 2 || progress === 100) {
+                        lastProgressSent = progress;
+                        self.postMessage({ type: 'progress', progress, partialHoles: holes.length });
+                    }
+                }
+                if (!cancelled) self.postMessage({ type: 'complete', holes, totalHoles: holes.length });
+            };
+        `;
+    const workerUrl = URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' }));
+    let computeWorker = null;
+    let workerActive = false;
+
+    function createWorker() {
+        if (computeWorker) {
+            if (workerActive) computeWorker.postMessage({ type: 'cancel' });
+            computeWorker.terminate();
+            workerActive = false;
+        }
+        computeWorker = new Worker(workerUrl);
+        return computeWorker;
+    }
+
+    window.cancelProcessing = function() {
+        if (computeWorker && workerActive) {
+            computeWorker.postMessage({ type: 'cancel' });
+            computeWorker.terminate();
+            workerActive = false;
+        }
+        document.getElementById('progress-container').style.display = 'none';
+        document.getElementById('btn-cancel').classList.add('hidden');
+        document.getElementById('btn-process').disabled = false;
+        document.getElementById('status-message').textContent = '⏹ تم إلغاء العملية';
+    };
+
+    window.addEventListener('beforeunload', () => {
+        if (computeWorker) try { computeWorker.terminate(); } catch (e) {}
+        URL.revokeObjectURL(workerUrl);
+    });
+</script>
+
+<!-- المنطق الرئيسي -->
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ---------- الدوال المساعدة للمنحنيات ----------
+    // تقسيم منحنى مكعب (C) إلى عدد من النقاط
+    function getCubicCurvePoints(start, cp1, cp2, end, numPoints = 50) {
+        const points = [];
+        for (let i = 0; i <= numPoints; i++) {
+            const t = i / numPoints;
+            const mt = 1 - t;
+            const x = mt ** 3 * start.x + 3 * mt ** 2 * t * cp1.x + 3 * mt * t ** 2 * cp2.x + t ** 3 * end.x;
+            const y = mt ** 3 * start.y + 3 * mt ** 2 * t * cp1.y + 3 * mt * t ** 2 * cp2.y + t ** 3 * end.y;
+            points.push({ x, y });
+        }
+        return points;
+    }
+
+    // تقسيم منحنى تربيعي (Q) إلى عدد من النقاط
+    function getQuadraticCurvePoints(start, cp, end, numPoints = 50) {
+        const points = [];
+        for (let i = 0; i <= numPoints; i++) {
+            const t = i / numPoints;
+            const mt = 1 - t;
+            const x = mt ** 2 * start.x + 2 * mt * t * cp.x + t ** 2 * end.x;
+            const y = mt ** 2 * start.y + 2 * mt * t * cp.y + t ** 2 * end.y;
+            points.push({ x, y });
+        }
+        return points;
+    }
+
+    // ---------- المتغيرات العامة ----------
+    let font = null;
+    let computedHoles = [];
+    let textOutlinePaths = []; // بالمتر (سنتيمتر) بعد الإزاحة
+
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const textInput = document.getElementById('text-input');
+    const widthInput = document.getElementById('width-cm');
+    const heightInput = document.getElementById('height-cm');
+    const radiusInput = document.getElementById('hole-radius');
+    const spacingInput = document.getElementById('hole-spacing');
+    const fontUpload = document.getElementById('font-upload');
+    const ledColorInput = document.getElementById('led-color');
+    const btnProcess = document.getElementById('btn-process');
+    const btnCancel = document.getElementById('btn-cancel');
+    const progressContainer = document.getElementById('progress-container');
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressLabel = document.getElementById('progress-label');
+    const progressDetail = document.getElementById('progress-detail');
+    const statusMessage = document.getElementById('status-message');
+    const holeCountSpan = document.getElementById('hole-count');
+    const procTimeSpan = document.getElementById('proc-time');
+
+    let scene, camera, renderer, controls, acrylicMesh, ledPointsMesh, outlineGroup, pointLight;
+    const threeContainer = document.getElementById('three-container');
+    const loader3d = document.getElementById('loader-3d');
+    const computationCache = new Map();
+
+    function getCacheKey() {
+        return `${textInput.value}|${widthInput.value}|${heightInput.value}|${radiusInput.value}|${spacingInput.value}|${font ? 'font-loaded' : 'no-font'}`;
+    }
+
+    function initThree() {
+        loader3d.style.display = 'flex';
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510);
+        const aspect = threeContainer.clientWidth / (threeContainer.clientHeight || 420);
+        camera = new THREE.PerspectiveCamera(55, aspect, 0.1, 2000);
+        camera.position.set(40, 30, 80);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight || 420);
+        threeContainer.appendChild(renderer.domElement);
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 15;
+        controls.maxDistance = 400;
+        controls.target.set(0, 0, 0);
+        controls.update();
+        scene.add(new THREE.AmbientLight(0x303050, 3.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(50, 80, 60);
+        scene.add(dirLight);
+        loader3d.style.display = 'none';
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if (pointLight && !document.hidden) pointLight.intensity = 10 + Math.sin(Date.now() * 0.004) * 2.5;
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+        animate();
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) return;
+            const w = threeContainer.clientWidth;
+            const h = threeContainer.clientHeight || 420;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+    }
+
+    function loadDefaultFont() {
+        opentype.load('./fonts/arial.ttf', (err, loadedFont) => {
+            if (err || !loadedFont) {
+                statusMessage.textContent = '⚠️ يرجى رفع خط TTF/OTF للبدء';
+            } else {
+                font = loadedFont;
+                statusMessage.textContent = '✅ الخط الافتراضي جاهز';
+                triggerProcess();
+            }
+        });
+    }
+
+    fontUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        statusMessage.textContent = '📖 جاري قراءة الخط...';
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                font = opentype.parse(event.target.result);
+                computationCache.clear();
+                statusMessage.textContent = '✅ تم تحميل الخط المخصص بنجاح';
+                triggerProcess();
+            } catch (err) {
+                alert('❌ خطأ في قراءة ملف الخط.');
+                statusMessage.textContent = '❌ فشل تحميل الخط';
+            }
+        };
+        reader.onerror = () => { alert('❌ فشل قراءة الملف.'); statusMessage.textContent = '❌ فشل قراءة الملف'; };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // استخراج مسارات النص بدقة عالية جداً (تقسيم المنحنيات)
+    function extractTextOutlines(text, fontSize) {
+        if (!font) return [];
+        const path = font.getPath(text, 0, 0, fontSize);
+        const outlines = [];
+        let currentPath = [];
+        let currentPos = { x: 0, y: 0 };
+
+        path.commands.forEach(cmd => {
+            if (cmd.type === 'M') {
+                if (currentPath.length) outlines.push(currentPath);
+                currentPath = [{ x: cmd.x, y: cmd.y }];
+                currentPos = { x: cmd.x, y: cmd.y };
+            } else if (cmd.type === 'L') {
+                currentPath.push({ x: cmd.x, y: cmd.y });
+                currentPos = { x: cmd.x, y: cmd.y };
+            } else if (cmd.type === 'C') {
+                const pts = getCubicCurvePoints(currentPos, { x: cmd.x1, y: cmd.y1 }, { x: cmd.x2, y: cmd.y2 }, { x: cmd
+                        .x, y: cmd.y });
+                currentPath.push(...pts.slice(1)); // تجنب تكرار النقطة الأولى
+                currentPos = { x: cmd.x, y: cmd.y };
+            } else if (cmd.type === 'Q') {
+                const pts = getQuadraticCurvePoints(currentPos, { x: cmd.x1, y: cmd.y1 }, { x: cmd.x, y: cmd.y });
+                currentPath.push(...pts.slice(1));
+                currentPos = { x: cmd.x, y: cmd.y };
+            } else if (cmd.type === 'Z') {
+                if (currentPath.length && (currentPath[0].x !== currentPos.x || currentPath[0].y !== currentPos.y)) {
+                    currentPath.push({ x: currentPath[0].x, y: currentPath[0].y });
+                }
+                outlines.push(currentPath);
+                currentPath = [];
+            }
+        });
+        if (currentPath.length) outlines.push(currentPath);
+        return outlines;
+    }
+
+    async function processDesignAsync(useLowRes = false) {
+        if (!font) { alert('يرجى تحميل خط أولاً.'); return; }
+        if (workerActive) { cancelProcessing(); await new Promise(r => setTimeout(r, 150)); }
+
+        const text = textInput.value.trim() || ' ';
+        const widthCm = parseFloat(widthInput.value) || 100;
+        const heightCm = parseFloat(heightInput.value) || 60;
+        const holeRadiusMm = parseFloat(radiusInput.value) || 3;
+        const spacingMm = parseFloat(spacingInput.value) || 15;
+
+        const cacheKey = getCacheKey() + (useLowRes ? '|lowres' : '');
+        if (computationCache.has(cacheKey)) {
+            const cached = computationCache.get(cacheKey);
+            computedHoles = cached.holes;
+            textOutlinePaths = cached.outlines;
+            drawCanvas(cached.holes, cached.outlines, widthCm, heightCm, holeRadiusMm, useLowRes ? 2 : 5);
+            updateThreePreview(widthCm, heightCm, cached.holes, holeRadiusMm, ledColorInput.value, cached.outlines);
+            holeCountSpan.textContent = cached.holes.length.toLocaleString('ar-EG');
+            procTimeSpan.textContent = cached.time + ' ثانية (مخزنة)';
+            statusMessage.textContent = `✅ من الذاكرة | ${cached.holes.length} ثقب + إطار`;
+            return;
+        }
+
+        btnProcess.disabled = true;
+        btnCancel.classList.remove('hidden');
+        progressContainer.style.display = 'block';
+        statusMessage.textContent = '⏳ جاري معالجة التصميم...';
+        holeCountSpan.textContent = '...';
+        procTimeSpan.textContent = '...';
+        const startTime = performance.now();
+
+        const scale = useLowRes ? 2 : 5;
+        const w = Math.round(widthCm * scale);
+        const h = Math.round(heightCm * scale);
+        canvas.width = w;
+        canvas.height = h;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, w, h);
+
+        let fontSize = w / (text.length * 0.7);
+        fontSize = Math.min(fontSize, h * 0.8);
+        fontSize = Math.max(fontSize, 8);
+
+        const rawOutlines = extractTextOutlines(text, fontSize);
+        const bbox = font.getPath(text, 0, 0, fontSize).getBoundingBox();
+        const textW = bbox.x2 - bbox.x1;
+        const textH = bbox.y2 - bbox.y1;
+        const offsetX = w / 2 - (bbox.x1 + textW / 2);
+        const offsetY = h / 2 - (bbox.y1 + textH / 2);
+
+        // تحويل المسارات إلى إحداثيات بالسنتيمتر
+        const outlinesCm = rawOutlines.map(path =>
+            path.map(p => ({
+                x: (p.x + offsetX) / scale,
+                y: (p.y + offsetY) / scale
+            }))
+        );
+        textOutlinePaths = outlinesCm;
+
+        // رسم إطار النص على الكانفاس بدقة عالية
+        ctx.save();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = Math.max(1.5, scale * 0.6);
+        ctx.lineJoin = 'round';
+        outlinesCm.forEach(path => {
+            if (path.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(path[0].x * scale, path[0].y * scale);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x * scale, path[i].y * scale);
+            ctx.stroke();
+        });
+        ctx.restore();
+
+        // قناع الثقوب
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = w;
+        maskCanvas.height = h;
+        const maskCtx = maskCanvas.getContext('2d');
+        maskCtx.fillStyle = 'black';
+        maskCtx.translate(offsetX, offsetY);
+        const maskPath = font.getPath(text, 0, 0, fontSize);
+        maskPath.fill = 'black';
+        maskPath.draw(maskCtx);
+        maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+        const imgData = maskCtx.getImageData(0, 0, w, h);
+        const buffer = imgData.data.buffer;
+        const step = spacingMm * (scale / 10);
+        const worker = createWorker();
+        workerActive = true;
+
+        return new Promise((resolve, reject) => {
+            worker.onmessage = function(e) {
+                if (e.data.type === 'progress') {
+                    progressFill.style.width = e.data.progress + '%';
+                    progressPercent.textContent = e.data.progress + '%';
+                    progressDetail.textContent =
+                    `تم العثور على ${e.data.partialHoles.toLocaleString('ar-EG')} ثقب...`;
+                } else if (e.data.type === 'complete') {
+                    workerActive = false;
+                    const data = e.data;
+                    const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                    computedHoles = data.holes;
+
+                    if (computationCache.size > 20) computationCache.delete(computationCache.keys().next()
+                    .value);
+                    computationCache.set(cacheKey, { holes: data.holes, outlines: outlinesCm, time: elapsed });
+
+                    drawCanvas(data.holes, outlinesCm, widthCm, heightCm, holeRadiusMm, scale);
+                    updateThreePreview(widthCm, heightCm, data.holes, holeRadiusMm, ledColorInput.value,
+                        outlinesCm);
+
+                    progressFill.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    progressLabel.textContent = '✅ اكتمل!';
+                    progressDetail.textContent =
+                        `${data.totalHoles.toLocaleString('ar-EG')} ثقب | إطار دقيق | ${elapsed} ثانية`;
+                    holeCountSpan.textContent = data.totalHoles.toLocaleString('ar-EG');
+                    procTimeSpan.textContent = elapsed + ' ثانية';
+                    statusMessage.textContent =
+                        `✅ ${data.totalHoles.toLocaleString('ar-EG')} ثقب + إطار قطع فائق الدقة`;
+
+                    btnProcess.disabled = false;
+                    btnCancel.classList.add('hidden');
+                    setTimeout(() => { if (!workerActive) progressContainer.style.display = 'none'; }, 2500);
+                    resolve(data.holes);
+                }
+            };
+            worker.onerror = function(err) {
+                workerActive = false;
+                btnProcess.disabled = false;
+                btnCancel.classList.add('hidden');
+                progressContainer.style.display = 'none';
+                statusMessage.textContent = '❌ خطأ في المعالجة.';
+                reject(err);
+            };
+            worker.postMessage({ imgBuffer: buffer, width: w, height: h, step, scale, holeRadiusMm }, [buffer]);
+        });
+    }
+
+    function drawCanvas(holes, outlinesCm, widthCm, heightCm, holeRadiusMm, scale) {
+        const w = widthCm * scale;
+        const h = heightCm * scale;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, w, h);
+
+        // إعادة رسم إطار النص الدقيق
+        ctx.save();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = Math.max(1.5, scale * 0.6);
+        ctx.lineJoin = 'round';
+        outlinesCm.forEach(path => {
+            if (path.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(path[0].x * scale, path[0].y * scale);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x * scale, path[i].y * scale);
+            ctx.stroke();
+        });
+        ctx.restore();
+
+        const rCanvas = holeRadiusMm * (scale / 10);
+        const ledColor = ledColorInput.value;
+        const batchSize = 3000;
+        let batchIndex = 0;
+
+        function drawBatch() {
+            const start = batchIndex * batchSize;
+            const end = Math.min(start + batchSize, holes.length);
+            for (let i = start; i < end; i++) {
+                const hole = holes[i];
+                ctx.beginPath();
+                ctx.arc(hole.cx, hole.cy, rCanvas, 0, Math.PI * 2);
+                ctx.fillStyle = ledColor;
+                ctx.fill();
+                ctx.strokeStyle = '#ff4444';
+                ctx.lineWidth = Math.max(0.5, rCanvas * 0.25);
+                ctx.stroke();
+            }
+            batchIndex++;
+            if (batchIndex * batchSize < holes.length) requestAnimationFrame(drawBatch);
+        }
+        drawBatch();
+    }
+
+    function updateThreePreview(wCm, hCm, holes, holeRadMm, ledColor, outlinesCm) {
+        if (!scene) return;
+        if (acrylicMesh) { scene.remove(acrylicMesh);
+            acrylicMesh.geometry?.dispose(); }
+        if (ledPointsMesh) { scene.remove(ledPointsMesh);
+            ledPointsMesh.geometry?.dispose(); }
+        if (outlineGroup) { scene.remove(outlineGroup);
+            outlineGroup.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); }); }
+        if (pointLight) { scene.remove(pointLight); }
+
+        const materialColor = new THREE.Color(ledColor);
+        const x3d = wCm;
+        const y3d = hCm;
+        const thickness = 0.7;
+        const r3d = holeRadMm / 10;
+
+        const boardShape = new THREE.Shape();
+        boardShape.moveTo(0, 0);
+        boardShape.lineTo(x3d, 0);
+        boardShape.lineTo(x3d, y3d);
+        boardShape.lineTo(0, y3d);
+        boardShape.closePath();
+
+        const maxHolesForExtrusion = 600;
+        if (holes.length <= maxHolesForExtrusion) {
+            holes.forEach(hole => {
+                const holePath = new THREE.Path();
+                holePath.absarc(hole.x, y3d - hole.y, r3d, 0, Math.PI * 2, true);
+                boardShape.holes.push(holePath);
+            });
+        }
+        const geom = new THREE.ExtrudeGeometry(boardShape, { depth: thickness, bevelEnabled: holes.length <=
+                maxHolesForExtrusion, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: holes.length > 300 ? 1 : 3 });
+        acrylicMesh = new THREE.Mesh(geom, new THREE.MeshPhysicalMaterial({ color: 0xf8fafc, metalness: 0.05,
+            roughness: 0.08, transmission: 0.85, opacity: 0.35, transparent: true, clearcoat: 0.9, ior: 1.5 }));
+        acrylicMesh.position.set(-x3d / 2, -y3d / 2, -thickness / 2);
+        scene.add(acrylicMesh);
+
+        // إطار القطع الدقيق في Three.js
+        outlineGroup = new THREE.Group();
+        outlinesCm.forEach(path => {
+            if (path.length < 2) return;
+            const points = path.map(p => new THREE.Vector3(p.x - x3d / 2, y3d - p.y - y3d / 2, thickness / 2 +
+            0.02));
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+            outlineGroup.add(new THREE.Line(lineGeo, lineMat));
+        });
+        scene.add(outlineGroup);
+
+        if (holes.length > 0) {
+            const numToShow = Math.min(holes.length, 8000);
+            const step = Math.max(1, Math.floor(holes.length / numToShow));
+            const sampledHoles = [];
+            for (let i = 0; i < holes.length; i += step) sampledHoles.push(holes[i]);
+            const pts = sampledHoles.map(h => new THREE.Vector3(h.x - x3d / 2, (y3d - h.y) - y3d / 2, -thickness /
+                2 - 0.15));
+            if (sampledHoles.length <= 2000) {
+                const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                ledPointsMesh = new THREE.Points(geo, new THREE.PointsMaterial({ color: materialColor, size: r3d *
+                        2.8, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthTest: false,
+                        depthWrite: false }));
+            } else {
+                const baseGeo = new THREE.SphereGeometry(r3d * 1.4, 6, 6);
+                const inst = new THREE.InstancedMesh(baseGeo, new THREE.MeshBasicMaterial({ color: materialColor,
+                    transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthTest: false,
+                    depthWrite: false }), pts.length);
+                const dummy = new THREE.Object3D();
+                pts.forEach((pt, i) => { dummy.position.copy(pt);
+                    dummy.updateMatrix();
+                    inst.setMatrixAt(i, dummy.matrix); });
+                inst.instanceMatrix.needsUpdate = true;
+                ledPointsMesh = inst;
+            }
+            scene.add(ledPointsMesh);
+            pointLight = new THREE.PointLight(materialColor, 12, Math.max(x3d, y3d) * 2.5);
+            pointLight.position.set(0, 0, -thickness);
+            scene.add(pointLight);
+        }
+
+        const maxDim = Math.max(x3d, y3d);
+        const zPos = maxDim / (2 * Math.tan((55 * Math.PI) / 360)) + thickness * 3;
+        camera.position.set(maxDim * 0.3, y3d * 0.35, zPos);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+    }
+
+    window.triggerProcess = async () => { try { await processDesignAsync(false); } catch (e) { console.error(e); } };
+    window.quickPreview = async () => { try { await processDesignAsync(true); } catch (e) { console.error(e); } };
+
+    let debounceTimer;
+    [textInput, widthInput, heightInput, radiusInput, spacingInput, ledColorInput].forEach(el => {
+        el.addEventListener('input', () => { computationCache.clear();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerProcess, 500); });
+        el.addEventListener('change', () => { computationCache.clear();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerProcess, 300); });
+    });
+
+    // DXF مع إطار قطع فائق الدقة
+    window.downloadDXF = function() {
+        if (!computedHoles.length && !textOutlinePaths.length) { alert('يرجى تحديث التصميم أولاً.'); return; }
+        const widthMm = parseFloat(widthInput.value) * 10;
+        const heightMm = parseFloat(heightInput.value) * 10;
+        const holeRadiusMm = parseFloat(radiusInput.value);
+        const text = textInput.value.trim() || 'Design';
+        const startTime = performance.now();
+        const parts = [];
+        parts.push("0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1021\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n");
+        parts.push("0\nLWPOLYLINE\n8\nBoard_Outline\n90\n4\n70\n1\n");
+        parts.push(`10\n0\n20\n0\n10\n${widthMm}\n20\n0\n10\n${widthMm}\n20\n${heightMm}\n10\n0\n20\n${heightMm}\n`);
+
+        // مسارات القطع (إطار الكلمة) دقيقة جداً
+        textOutlinePaths.forEach(path => {
+            if (path.length < 2) return;
+            let polyline = `0\nLWPOLYLINE\n8\nText_Outline\n90\n${path.length}\n70\n1\n`;
+            path.forEach(p => {
+                const x = p.x * 10; // سم -> مم
+                const y = heightMm - (p.y * 10);
+                polyline += `10\n${x.toFixed(3)}\n20\n${y.toFixed(3)}\n`;
+            });
+            parts.push(polyline);
+        });
+
+        const batchSize = 5000;
+        let offset = 0;
+
+        function appendBatch() {
+            const end = Math.min(offset + batchSize, computedHoles.length);
+            let batchStr = '';
+            for (let i = offset; i < end; i++) {
+                const hole = computedHoles[i];
+                const x = hole.x * 10;
+                const y = heightMm - (hole.y * 10);
+                batchStr +=
+                    `0\nCIRCLE\n8\nLED_Holes\n10\n${x.toFixed(3)}\n20\n${y.toFixed(3)}\n40\n${holeRadiusMm}\n`;
+            }
+            parts.push(batchStr);
+            offset = end;
+            if (offset < computedHoles.length) {
+                setTimeout(appendBatch, 10);
+            } else {
+                parts.push("0\nENDSEC\n0\nEOF\n");
+                const blob = new Blob([parts.join('')], { type: 'application/dxf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download =
+                    `LED_Sign_${text.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_')}_${Date.now()}.dxf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                statusMessage.textContent =
+                    `✅ DXF جاهز | ${computedHoles.length} ثقب + إطار دقيق | ${elapsed} ث`;
+                progressContainer.style.display = 'none';
+            }
+        }
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressPercent.textContent = '0%';
+        progressLabel.textContent = '📥 تحضير DXF (إطار قطع فائق الدقة)...';
+        appendBatch();
+    };
+
+    window.addEventListener('load', () => { initThree();
+        loadDefaultFont(); });
+    window.processDesign = () => window.triggerProcess();
+</script>
+</body>
+</html>
