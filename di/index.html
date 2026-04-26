@@ -2,42 +2,44 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>معرض التصاميم - عرض تفاعلي</title>
+    <title>استعراض التصميم الهندسي</title>
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <style>
-        body { margin: 0; padding: 20px; font-family: sans-serif; background: #f4f4f4; }
-        #container { width: 100%; height: 80vh; border: 2px solid #333; background: white; overflow: hidden; }
-        .controls { margin-top: 10px; text-align: center; }
-        button { padding: 10px 20px; cursor: pointer; }
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; background: #1a1a1a; }
+        #svg-container { flex-grow: 1; width: 100%; cursor: grab; }
+        .toolbar { padding: 10px; background: #333; color: white; display: flex; justify-content: center; gap: 15px; }
+        button { padding: 8px 16px; cursor: pointer; border: none; border-radius: 4px; background: #555; color: white; }
+        button:hover { background: #777; }
     </style>
 </head>
 <body>
 
-    <h1>استعراض التصميم: 1.svg</h1>
-    
-    <div id="container">
-        <object id="svg-view" data="1.svg" type="image/svg+xml" style="width:100%; height:100%;"></object>
+    <div class="toolbar">
+        <button onclick="instance.zoomIn()">تكبير (+)</button>
+        <button onclick="instance.zoomOut()">تصغير (-)</button>
+        <button onclick="instance.reset()">الوضع الأصلي</button>
+        <button onclick="instance.fit()">احتواء الشاشة</button>
     </div>
 
-    <div class="controls">
-        <button onclick="panZoomInstance.zoomIn()">تكبير (+)</button>
-        <button onclick="panZoomInstance.zoomOut()">تصغير (-)</button>
-        <button onclick="panZoomInstance.reset()">إعادة تعيين</button>
-        <a href="1.cdr" download>تحميل ملف CDR</a>
+    <div id="svg-container">
+        <object id="my-svg" data="1.svg" type="image/svg+xml" width="100%" height="100%"></object>
     </div>
 
     <script>
-        // تفعيل التفاعل بعد تحميل ملف الـ SVG
+        var instance;
         window.onload = function() {
-            var svgElement = document.getElementById('svg-view');
-            
-            // انتظر حتى يتم تحميل الـ SVG بالكامل
+            var svgElement = document.getElementById('my-svg');
             svgElement.addEventListener('load', function() {
-                window.panZoomInstance = svgPanZoom('#svg-view', {
+                instance = svgPanZoom('#my-svg', {
                     zoomEnabled: true,
-                    controlIconsEnabled: true,
+                    controlIconsEnabled: false, // تم الإخفاء لنترك الواجهة نظيفة
                     fit: true,
-                    center: true
+                    center: true,
+                    minZoom: 0.5,
+                    maxZoom: 10,
+                    // تفعيل التحريك الحر
+                    panEnabled: true,
+                    dblClickZoomEnabled: true
                 });
             });
         };
