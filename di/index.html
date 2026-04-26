@@ -2,40 +2,45 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>معرض التصاميم الهندسية</title>
+    <title>معرض التصاميم - عرض تفاعلي</title>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <style>
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
-        .card { border: 1px solid #ccc; padding: 10px; text-align: center; border-radius: 8px; }
-        .card img { width: 100%; height: auto; }
-        .download-btn { display: block; margin-top: 10px; color: blue; text-decoration: none; font-weight: bold; }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: #f4f4f4; }
+        #container { width: 100%; height: 80vh; border: 2px solid #333; background: white; overflow: hidden; }
+        .controls { margin-top: 10px; text-align: center; }
+        button { padding: 10px 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>مكتبة التصاميم</h1>
-    <div id="gallery" class="gallery"></div>
+    <h1>استعراض التصميم: 1.svg</h1>
+    
+    <div id="container">
+        <object id="svg-view" data="1.svg" type="image/svg+xml" style="width:100%; height:100%;"></object>
+    </div>
+
+    <div class="controls">
+        <button onclick="panZoomInstance.zoomIn()">تكبير (+)</button>
+        <button onclick="panZoomInstance.zoomOut()">تصغير (-)</button>
+        <button onclick="panZoomInstance.reset()">إعادة تعيين</button>
+        <a href="1.cdr" download>تحميل ملف CDR</a>
+    </div>
 
     <script>
-        // ضع هنا أسماء الملفات الموجودة في المجلد (يجب أن تتطابق الأسماء)
-        const files = ["1.svg", "1.svg", "1.svg"]; 
-        const folder = "designs/"; // المجلد الذي يحتوي على الملفات
-
-        const gallery = document.getElementById('gallery');
-
-        files.forEach(file => {
-            const card = document.createElement('div');
-            card.className = 'card';
+        // تفعيل التفاعل بعد تحميل ملف الـ SVG
+        window.onload = function() {
+            var svgElement = document.getElementById('svg-view');
             
-            // رابط ملف الـ CDR (بافتراض أنه بنفس الاسم ولكن بامتداد .cdr)
-            const cdrFile = file.replace('.svg', '.cdr');
-            
-            card.innerHTML = `
-                <img src="${folder}${file}" alt="${file}">
-                <p>${file}</p>
-                <a href="${folder}${cdrFile}" class="download-btn" download>تحميل ملف CDR</a>
-            `;
-            gallery.appendChild(card);
-        });
+            // انتظر حتى يتم تحميل الـ SVG بالكامل
+            svgElement.addEventListener('load', function() {
+                window.panZoomInstance = svgPanZoom('#svg-view', {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true
+                });
+            });
+        };
     </script>
 </body>
 </html>
