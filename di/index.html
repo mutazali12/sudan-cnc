@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>معرض التصاميم الهندسية</title>
+    <style>
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
+        .card { border: 1px solid #ccc; padding: 10px; text-align: center; border-radius: 8px; }
+        .card img { width: 100%; height: auto; }
+        .download-btn { display: block; margin-top: 10px; color: blue; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>مكتبة التصاميم</h1>
+    <div id="gallery" class="gallery"></div>
+
+    <script>
+        // ضع هنا أسماء الملفات الموجودة في المجلد (يجب أن تتطابق الأسماء)
+        const files = ["1.svg", "design2.svg", "logo_v1.svg"]; 
+        const folder = "designs/"; // المجلد الذي يحتوي على الملفات
+
+        const gallery = document.getElementById('gallery');
+
+        files.forEach(file => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            // رابط ملف الـ CDR (بافتراض أنه بنفس الاسم ولكن بامتداد .cdr)
+            const cdrFile = file.replace('.svg', '.cdr');
+            
+            card.innerHTML = `
+                <img src="${folder}${file}" alt="${file}">
+                <p>${file}</p>
+                <a href="${folder}${cdrFile}" class="download-btn" download>تحميل ملف CDR</a>
+            `;
+            gallery.appendChild(card);
+        });
+    </script>
+</body>
+</html>
